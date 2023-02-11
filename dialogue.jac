@@ -1,3 +1,7 @@
+edge entity_transition {
+    has entities;
+}
+
 node dialogue_state {
     can bi_enc.infer;
     can tfm_ner.extract_entity;
@@ -12,8 +16,12 @@ node dialogue_state {
         )[0]["predicted"]["label"];
     }
 
-    can extract_entities {
-        // Entity extraction logic will be added a bit later on.
+    can process {
+        if (visitor.wlk_ctx["prev_state"]): visitor.wlk_ctx["respond"] = true;
+        else {
+            visitor.wlk_ctx["next_state"] = net.root();
+            visitor.wlk_ctx["prev_state"] = here;
+        }
     }
 
     can init_wlk_ctx {
@@ -39,6 +47,18 @@ node dialogue_state {
         }
     }
     can nlg {}
+
+    can extract_entities {
+        res = tfm_ner.extract_entity(visitor.question);
+        for ent in res {
+            ent_type = ent["entity_value"];
+            ent_text = ent["entity_text"];
+            if (!(ent_type in visitor.wlk_ctx["entities"])){
+                visitor.wlk_ctx["entities"][ent_type] = [];
+            }
+            visitor.wlk_ctx["entities"][ent_type].l::append(ent_text);
+        }
+    }
 }
 
 node dialogue_root:dialogue_state {
