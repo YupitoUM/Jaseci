@@ -1,7 +1,14 @@
 import {*} with "./faq.jac";
+import {*} with "./ai_model.jac";
+import {*} with "./bi_enc.jac";
+import {*} with "./tfm_ner.jac";
 
 edge entity_transition {
     has entities;
+}
+
+edge intent_transition {
+    has intent;
 }
 
 node cai_state {
@@ -176,10 +183,6 @@ node td_canceled:dialogue_state {
     }
 }
 
-edge intent_transition {
-    has intent;
-}
-
 graph tesla_ai {
     has anchor dialogue_root;
     spawn {
@@ -205,27 +208,39 @@ graph tesla_ai {
 walker init {
     root {
         spawn here ++> graph::tesla_ai;
-        spawn here walker::talk;
     }
 }
 
 walker talk {
-    has question;
-    has wlk_ctx = {};
+    has question, interactive = false;
+    has wlk_ctx = {
+        "intent": null,
+        "entities": {},
+        "prev_state": null,
+        "next_state": null,
+        "respond": false
+    };
     has response;
     root {
         take --> node::dialogue_root;
     }
     cai_state {
-        if (!question) {
+        if (!question and interactive) {
             question = std.input("Question (Ctrl-C to exit)> ");
             here::init_wlk_ctx;
+        } elif (!question and !interactive){
+            std.err("ERROR: question is required for non-interactive mode");
+            disengage;
         }
         here::nlu;
         here::process;
         if (visitor.wlk_ctx["respond"]) {
             here::nlg;
-            std.out(response);
+            if (interactive): std.out(response);
+            else {
+                yield report response;
+                here::init_wlk_ctx;
+            }
             question = null;
             take here;
         } else {
