@@ -1,7 +1,5 @@
 import {*} with "./faq.jac";
 import {*} with "./ai_model.jac";
-import {*} with "./bi_enc.jac";
-import {*} with "./tfm_ner.jac";
 
 edge entity_transition {
     has entities;
